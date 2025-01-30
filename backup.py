@@ -7,21 +7,28 @@ import re
 from urllib.parse import urlparse
 from pathlib import Path
 import requests
+from datetime import datetime
 
 jenv = Environment(
-    loader=PackageLoader("src.prerenders"),
-    autoescape=select_autoescape()
+    loader=PackageLoader("src.prerenders"), autoescape=select_autoescape()
 )
 
-def progress_bar(iteration, total, prefix='', suffix='', length=30, fill='█'):
+
+def progress_bar(iteration, total, prefix="", suffix="", length=30, fill="█"):
     percent = ("{0:.1f}").format(100 * (iteration / float(total)))
     filled_length = int(length * iteration // total)
-    bar = fill * filled_length + '-' * (length - filled_length)
-    sys.stdout.write(f'\r{prefix} |{bar}| {percent}% {suffix}')
+    bar = fill * filled_length + "-" * (length - filled_length)
+    sys.stdout.write(f"\r{prefix} |{bar}| {percent}% {suffix}")
     sys.stdout.flush()
 
+
 tokens = []
-for envkey in ["TBS_CONSUMER_KEY", "TBS_CONSUMER_SECRET", "TBS_OAUTH_TOKEN", "TBS_OAUTH_SECRET"]:
+for envkey in [
+    "TBS_CONSUMER_KEY",
+    "TBS_CONSUMER_SECRET",
+    "TBS_OAUTH_TOKEN",
+    "TBS_OAUTH_SECRET",
+]:
     ek = os.environ.get(envkey)
     if not ek:
         print(f"missing {envkey} variable, exiting")
@@ -29,9 +36,8 @@ for envkey in ["TBS_CONSUMER_KEY", "TBS_CONSUMER_SECRET", "TBS_OAUTH_TOKEN", "TB
     tokens.append(ek)
 
 # https://github.com/tumblr/pytumblr?tab=readme-ov-file
-client = pytumblr.TumblrRestClient(
-    *tokens
-)
+client = pytumblr.TumblrRestClient(*tokens)
+
 
 def queue_media_download(data):
     A = "./src/images"
@@ -50,7 +56,10 @@ def queue_media_download(data):
                 with open(target, mode="wb") as file:
                     file.write(response.content)
                 data[subject] = data[subject].replace("srcset=", "notsrcset=")
-                data[subject] = data[subject].replace(url, f"../images{dirname}/{filename}")
+                data[subject] = data[subject].replace(
+                    url, f"../images{dirname}/{filename}"
+                )
+
 
 def prerender(data):
     template = jenv.get_template(f"{data["type"]}.md")
@@ -61,6 +70,7 @@ def prerender(data):
     if not Path(target).exists():
         with open(target, "w") as f:
             f.write(contents)
+
 
 try:
     blog = sys.argv[1]
@@ -73,11 +83,17 @@ params = {"limit": L, "offset": 0}
 info = client.blog_info(blog)
 total = info["blog"]["total_posts"]
 P = total // L + 1
+TS = os.environ.get("TBS_TS", str(datetime.now()))
+TS = int(datetime.timestamp(datetime.fromisoformat(TS)))
 
 for i in range(P):
     params["offset"] = i * L
     posts = client.posts(blog, **params)
+    if posts["posts"][0]["timestamp"] < TS:
+        break
     for post in posts["posts"]:
+        if post["timestamp"] < TS:
+            break
         match post["type"]:
             case "answer":
                 prerender(post)
@@ -87,8 +103,7 @@ for i in range(P):
                 prerender(post)
             case other:
                 print("->", post["type"], post.keys())
-    progress_bar(i, P, prefix='Downloading:', suffix='', length=30)
+    progress_bar(i, P, prefix="Downloading:", suffix="", length=30)
     if len(posts["posts"]) < L:
         break
     sleep(0.5)
-
