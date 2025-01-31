@@ -51,7 +51,7 @@ podman build \
 --build-arg OAUTH_SECRET=<replace me> \
 --build-arg OAUTH_TOKEN=<replace me> \
 --build-arg BLOG_NAME=<replace me> \
-.
+-f Containerfile.www
 
 podman run -p 8080:80 <container image id>
 
