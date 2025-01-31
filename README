@@ -1,0 +1,58 @@
+Once built, this container will download all posts from a Tumblr blog,
+including the images embedded in each post.
+
+The downloaded content is then used as input to a static site generator,
+creating a simple static blog site to browse locally or host online.
+
+Setup
+-----
+
+Obtain Tumblr credentials: consumer+secret, oauth token+secret. See
+Tumblr API documentation.
+
+Also, figure out the name of the blog to mirror.
+
+Then, choose any option below.
+
+Option 1: store local copy and add new posts incrementally
+----------------------------------------------------------
+
+This is suitable for keeping a local copy and adding new posts over time,
+for example by a cron job.
+
+* `TBS_LAST_SYNC` is a ISO-formatted datetime. All posts that are _earlier_
+than the provided datetime will be skipped.
+
+mkdir posts build media
+podman run --rm -it \
+-e TBS_CONSUMER_KEY=<replace me> \
+-e TBS_CONSUMER_SECRET=<replace me> \
+-e TBS_OAUTH_SECRET=<replace me> \
+-e TBS_OAUTH_TOKEN=<replace me> \
+-e TBS_BLOG_NAME=<replace me> \
+-e TBS_LAST_SYNC="2020-01-01 06:06" \
+-v ./posts:/app/src/posts \
+-v ./build:/app/src/images \
+-v ./output:/app/site \
+<container image id>
+
+Mirror files are now available in `./build`, open
+`build/index.html` in a web browser to view it.
+
+Option 2: Make mirror and serve by httpd
+----------------------------------------
+
+This is suitable for resting/abandoned blogs. May be served behind a
+reverse proxy like caddy.
+
+podman build \
+--build-arg CONSUMER_KEY=<replace me> \
+--build-arg CONSUMER_SECRET=<replace me> \
+--build-arg OAUTH_SECRET=<replace me> \
+--build-arg OAUTH_TOKEN=<replace me> \
+--build-arg BLOG_NAME=<replace me> \
+.
+
+podman run -p 8080:80 <container image id>
+
+Mirror is now available at http://localhost:8080
