@@ -24,6 +24,7 @@ for example by a cron job.
 than the provided datetime will be skipped.
 
 mkdir posts build media
+podman build .
 podman run --rm -it \
 -e TBS_CONSUMER_KEY=<replace me> \
 -e TBS_CONSUMER_SECRET=<replace me> \
@@ -38,6 +39,43 @@ podman run --rm -it \
 
 Mirror files are now available in `./build`, open
 `build/index.html` in a web browser to view it.
+
+Typical Caddy config:
+
+```
+mirror.example.com {
+	root * /var/www/mirror.example.com
+	encode gzip
+	file_server
+}
+```
+
+Typical crontab:
+
+```
+0 6 * * * $HOME/mirror.sh
+```
+
+mirror.sh:
+
+```
+#!/bin/bash
+BLOG_NAME="your-blog-name"
+yesterday=$(expr $(date -u +%s) - 86400)
+podman run --rm -it \
+-e TBS_CONSUMER_KEY=$TBS_CONSUMER_KEY \
+-e TBS_CONSUMER_SECRET=$TBS_CONSUMER_SECRET \
+-e TBS_OAUTH_TOKEN=$TBS_OAUTH_TOKEN \
+-e TBS_OAUTH_SECRET=$TBS_OAUTH_SECRET \
+-e TBS_BLOG_NAME=$BLOG_NAME \
+-e TBS_LAST_SYNC=$yesterday \
+-v ./posts:/app/src/posts \
+-v ./build:/app/src/images \
+-v ./output:/app/site \
+<container image id>
+```
+
+
 
 Option 2: Make mirror and serve by httpd
 ----------------------------------------
