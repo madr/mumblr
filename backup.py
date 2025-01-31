@@ -1,7 +1,6 @@
 import pytumblr
 import sys
 import os
-from time import sleep
 from jinja2 import Environment, PackageLoader, select_autoescape
 import re
 from urllib.parse import urlparse
@@ -35,7 +34,6 @@ for envkey in [
         exit(1)
     tokens.append(ek)
 
-# https://github.com/tumblr/pytumblr?tab=readme-ov-file
 client = pytumblr.TumblrRestClient(*tokens)
 
 
@@ -72,10 +70,10 @@ def prerender(data):
             f.write(contents)
 
 
-try:
-    blog = sys.argv[1]
-except IndexError:
-    print("missing blogname argument, exiting")
+blog = os.environ.get("TBS_BLOG_NAME")
+
+if not blog:
+    print("missing TBS_BLOG_NAME variable, exiting")
     exit(2)
 
 L = 50
@@ -83,7 +81,7 @@ params = {"limit": L, "offset": 0}
 info = client.blog_info(blog)
 total = info["blog"]["total_posts"]
 P = total // L + 1
-TS = os.environ.get("TBS_TS", str(datetime.now()))
+TS = os.environ.get("TBS_LAST_SYNC", str(datetime.now()))
 TS = int(datetime.timestamp(datetime.fromisoformat(TS)))
 
 for i in range(P):
@@ -103,7 +101,5 @@ for i in range(P):
                 prerender(post)
             case other:
                 print("->", post["type"], post.keys())
-    progress_bar(i, P, prefix="Downloading:", suffix="", length=30)
     if len(posts["posts"]) < L:
         break
-    sleep(0.5)
